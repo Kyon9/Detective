@@ -1,0 +1,7 @@
+{
+  "name": "Detective Noir: AI Mystery Solver",
+  "description": "An immersive detective role-playing game where you solve complex murder mysteries with the help of an AI assistant. Collect evidence, examine maps, and generate visual clues using Gemini.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
