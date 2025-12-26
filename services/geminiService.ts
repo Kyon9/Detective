@@ -1,12 +1,12 @@
 
-import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AgentResponse, ClueType } from "../types";
+import { GoogleGenAI, Type } from "@google/genai";
+import { AgentResponse } from "../types";
 
 const SYSTEM_INSTRUCTION = `你是一位专业的调查助手，正在协助侦探破解一起复杂的推理案件。
 
 重要准则：
 1. 你的名字叫“助手”。
-2. 语言风格：专业、直接、高效，不要过多的辞藻修饰。必须使用中文交流。
+2. 语言风格：专业、直接、高效，带有1940年代黑色电影的冷峻感。必须使用中文交流。
 3. 当侦探要求调查某处，或对话中出现关键突破时，你必须提供新的线索（Clue）。
 4. 你的所有回复必须是严格的 JSON 格式。
 5. 视觉线索（type: 'image'）：提供简洁的英文描述作为 'contentPrompt'。
@@ -21,8 +21,8 @@ const SYSTEM_INSTRUCTION = `你是一位专业的调查助手，正在协助侦�
       "title": "线索标题",
       "description": "说明该线索的重要性",
       "type": "text" | "image" | "map",
-      "contentPrompt": "如果类型是 image/map，请提供英文绘画提示词",
-      "contentText": "如果类型是 text，请提供具体的文字内容"
+      "contentPrompt": "如果类型是 image/map，提供英文绘画提示词",
+      "contentText": "如果类型是 text，提供具体的文字内容"
     }
   ]
 }
@@ -35,11 +35,12 @@ export const getDetectiveResponse = async (
   caseContext: string
 ): Promise<AgentResponse> => {
   try {
+    // 每次请求动态初始化，确保获取最新的环境变量
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [
-        ...history,
+        ...history, 
         { role: 'user', parts: [{ text: `案件背景: ${caseContext}\n\n侦探指令: ${currentMessage}` }] }
       ],
       config: {
@@ -69,14 +70,14 @@ export const getDetectiveResponse = async (
       }
     });
 
-    if (!response.text) {
-      throw new Error("Empty response from AI");
-    }
-
-    return JSON.parse(response.text);
+    const text = response.text;
+    if (!text) throw new Error("Gemini 返回为空");
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error("Gemini Text Error:", error);
-    return { message: "抱歉，通讯信号不稳定。请您重复刚才的指令。" };
+    console.error("Gemini 对话失败:", error);
+    return { 
+      message: "抱歉，侦探。由于通讯线路繁忙或 API 密钥问题，助手暂时无法回应。请检查环境变量配置或稍后再试。" 
+    };
   }
 };
 
@@ -86,7 +87,7 @@ export const generateClueVisual = async (prompt: string): Promise<string | null>
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
-        parts: [{ text: `A professional forensic photo of: ${prompt}. Realistic, detailed, neutral lighting.` }]
+        parts: [{ text: `Professional forensic photo: ${prompt}. Noir aesthetic, high contrast, detailed, 1940s style.` }]
       },
       config: {
         imageConfig: { aspectRatio: "1:1" }
@@ -100,7 +101,7 @@ export const generateClueVisual = async (prompt: string): Promise<string | null>
     }
     return null;
   } catch (error) {
-    console.error("Gemini Image Error:", error);
+    console.error("证据生成失败:", error);
     return null;
   }
 };

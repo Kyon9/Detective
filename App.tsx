@@ -20,10 +20,8 @@ const App: React.FC = () => {
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 初始化应用：设置欢迎辞并将案件背景存入线索库
   useEffect(() => {
     if (messages.length === 0) {
-      // 1. 设置欢迎辞
       const intro: Message = {
         id: 'intro',
         role: 'assistant',
@@ -32,7 +30,6 @@ const App: React.FC = () => {
       };
       setMessages([intro]);
 
-      // 2. 将案件背景作为初始线索存入
       const initialClue: Clue = {
         id: 'clue-initial-case',
         title: `案件简报：${INITIAL_CASE.title}`,
@@ -57,7 +54,7 @@ const App: React.FC = () => {
       clues,
       timestamp: Date.now(),
       caseId: INITIAL_CASE.id,
-      preview: messages.length > 0 ? messages[messages.length - 1].text.substring(0, 30) : "新案件调查开始"
+      preview: messages.length > 0 ? messages[messages.length - 1].text.substring(0, 30) : "调查开始"
     };
     localStorage.setItem(`detective_save_slot_${slotIndex}`, JSON.stringify(saveData));
     setSaveStatus(`档案已存入第 ${slotIndex} 号文件柜`);
@@ -69,9 +66,9 @@ const App: React.FC = () => {
     const rawData = localStorage.getItem(`detective_save_slot_${slotIndex}`);
     if (!rawData) return;
     try {
-      const { messages: savedMessages, clues: savedClues } = JSON.parse(rawData);
-      setMessages(savedMessages);
-      setClues(savedClues);
+      const parsed = JSON.parse(rawData);
+      setMessages(parsed.messages);
+      setClues(parsed.clues);
       setSaveStatus(`成功调取第 ${slotIndex} 号档案`);
       setModalOpen(false);
       setTimeout(() => setSaveStatus(null), 3000);
@@ -97,7 +94,7 @@ const App: React.FC = () => {
 
     try {
       const history = messages.slice(-10).map(m => ({
-        role: m.role === 'user' ? 'user' as const : 'model' as const,
+        role: (m.role === 'user' ? 'user' : 'model') as 'user' | 'model',
         parts: [{ text: m.text }]
       }));
 
@@ -131,7 +128,7 @@ const App: React.FC = () => {
         }
       }
     } catch (error: any) {
-      console.error("Gemini API Error:", error);
+      console.error("探案过程出错:", error);
     } finally {
       setIsLoading(false);
     }
@@ -145,8 +142,8 @@ const App: React.FC = () => {
             <span className="text-2xl filter contrast-125 grayscale">🕵️</span>
           </div>
           <div>
-            <h1 className="text-xl font-bold typewriter-font tracking-tight text-amber-500">智能探案助手</h1>
-            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">档案编号：{INITIAL_CASE.id}</p>
+            <h1 className="text-xl font-bold typewriter-font tracking-tight text-amber-500">黑色侦探：AI 探案助手</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">档案编号：{INITIAL_CASE.id} | 系统状态：双路加密</p>
           </div>
         </div>
 
@@ -164,10 +161,6 @@ const App: React.FC = () => {
             >
               <span>📂</span> 调档
             </button>
-          </div>
-          <div className="flex items-center bg-amber-900/10 px-3 py-1.5 rounded-full border border-amber-900/20">
-            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-2 shadow-[0_0_5px_rgba(245,158,11,0.5)]"></span>
-            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">案件调查中</span>
           </div>
         </div>
       </header>
@@ -194,9 +187,6 @@ const App: React.FC = () => {
                     {msg.role === 'user' ? '侦探' : '助手'}
                   </div>
                   <p className="text-[16px] leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                  <div className="flex justify-end mt-3 opacity-20 pt-2 text-[8px]">
-                    <span>{new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                  </div>
                 </div>
               </div>
             ))}
@@ -209,7 +199,7 @@ const App: React.FC = () => {
                       <div className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-bounce [animation-delay:0.2s]"></div>
                       <div className="w-1.5 h-1.5 bg-amber-600 rounded-full animate-bounce [animation-delay:0.4s]"></div>
                    </div>
-                   <p className="text-[10px] text-amber-700 uppercase font-bold tracking-[0.3em]">正在分析卷宗...</p>
+                   <p className="text-[10px] text-amber-700 uppercase font-bold tracking-[0.3em]">正在检索卷宗...</p>
                 </div>
               </div>
             )}
@@ -217,21 +207,19 @@ const App: React.FC = () => {
 
           <div className="p-6 bg-slate-900 border-t border-slate-800 z-20">
             <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-3">
-              <div className="flex-1 relative">
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  placeholder="输入调查指令..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-sm px-6 py-4 text-slate-200 focus:outline-none focus:border-amber-700/50 transition-all placeholder:text-slate-700 text-sm"
-                />
-              </div>
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="键入您的调查指令..."
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-sm px-6 py-4 text-slate-200 focus:outline-none focus:border-amber-700/50 transition-all placeholder:text-slate-700 text-sm"
+              />
               <button
                 type="submit"
                 disabled={isLoading || !inputText.trim()}
-                className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 text-white px-8 py-4 rounded-sm font-bold shadow-lg transition-all active:translate-y-1 flex items-center gap-2 uppercase tracking-widest"
+                className="bg-amber-700 hover:bg-amber-600 disabled:bg-slate-800 disabled:text-slate-600 text-white px-8 py-4 rounded-sm font-bold shadow-lg transition-all active:translate-y-1 uppercase tracking-widest"
               >
-                {isLoading ? '调查中' : '发送'}
+                发送
               </button>
             </form>
           </div>
@@ -249,22 +237,6 @@ const App: React.FC = () => {
         onClose={() => setModalOpen(false)} 
         onSelectSlot={modalMode === 'save' ? onSaveToSlot : onLoadFromSlot}
       />
-
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #020617;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
-        }
-      `}</style>
     </div>
   );
 };
