@@ -2,30 +2,56 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AgentResponse } from "../types";
 
-// 声明全局常量以应对 Vite 的 define 注入
-declare const __API_KEY__: string;
-
 const SYSTEM_INSTRUCTION = `你是一位专业的调查助手，正在协助侦探破解复杂的推理案件。
 
 重要准则：
 1. 你的名字叫“助手”，语言风格需符合1940年代黑色电影的冷峻、专业感。
 2. 必须使用中文交流。
 3. 你的回复必须是严格的 JSON 格式，且符合指定的 Schema。
-4. 线索（newClues）：只有当侦探的调查产生了实际结果（如搜查了某个地方、询问了关键问题）时，才返回新线索。
+4. 线索（newClues）：当侦探调查某个具体地点、检查尸体或发现重要物件时，请务必返回线索。
+   - contentPrompt 应详细描述视觉细节。
+
+5. 破案判定（isSolved）：
+   - 当侦探（用户）准确说出凶手/窃贼是谁，并基本解释对其犯罪手法（例如：在第二个案件中提到“秘书”和“鹦鹉”）时，请将 isSolved 设为 true。
+   - 在 solveSummary 中提供整个案件的真相复盘。
 
 回复模式（JSON）：
 {
   "message": "对侦探的回复",
-  "newClues": []
+  "isSolved": false,
+  "solveSummary": "如果不为 true 则留空",
+  "newClues": [
+    {
+      "title": "线索标题",
+      "description": "对线索的简短文字描述",
+      "type": "image",
+      "contentPrompt": "用于生成图像的详细英文描述"
+    }
+  ]
 }`;
 
-// 辅助函数：安全获取 API KEY
-const getSafeApiKey = (): string | undefined => {
+// 测试网络连接
+export const testConnection = async (): Promise<{ ok: boolean; error?: string; status?: number }> => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) return { ok: false, error: 'MISSING_KEY' };
+  
   try {
-    const key = (typeof __API_KEY__ !== 'undefined' ? __API_KEY__ : undefined) || process.env.API_KEY;
-    return (key && key !== "undefined" && key !== "") ? key : undefined;
-  } catch {
-    return undefined;
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: 'hi',
+      config: { 
+        maxOutputTokens: 1,
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    });
+    return { ok: true };
+  } catch (e: any) {
+    console.error("Connection test failed:", e);
+    if (e.message?.includes('location is not supported')) {
+        return { ok: false, error: 'LOCATION_NOT_SUPPORTED', status: 400 };
+    }
+    return { ok: false, error: e.message || 'NETWORK_ERROR' };
   }
 };
 
@@ -34,19 +60,16 @@ export const getDetectiveResponse = async (
   currentMessage: string,
   caseContext: string
 ): Promise<AgentResponse> => {
-  const apiKey = getSafeApiKey();
-
-  if (!apiKey) {
+  if (!process.env.API_KEY) {
     return { 
-      message: "【系统错误】未检测到 API 密钥。请在 Vercel 设置中添加 API_KEY 环境变量并重新部署项目。" 
+      message: "⚠️ 【密钥未找到】侦探，我找不到您的调查授权（API_KEY）。请检查环境变量配置。" 
     };
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
-    // 使用 gemini-3-flash-preview 以保证最佳响应速度和稳定性
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', 
+      model: 'gemini-3-pro-preview', 
       contents: [
         ...history, 
         { role: 'user', parts: [{ text: `[当前案件背景]\n${caseContext}\n\n[侦探最新行动]\n${currentMessage}` }] }
@@ -58,6 +81,8 @@ export const getDetectiveResponse = async (
           type: Type.OBJECT,
           properties: {
             message: { type: Type.STRING },
+            isSolved: { type: Type.BOOLEAN },
+            solveSummary: { type: Type.STRING },
             newClues: {
               type: Type.ARRAY,
               items: {
@@ -82,46 +107,30 @@ export const getDetectiveResponse = async (
     if (!text) throw new Error("EMPTY_RESPONSE");
     return JSON.parse(text);
   } catch (error: any) {
-    console.group("Gemini API 故障诊断");
-    console.error("错误详情:", error);
-    console.groupEnd();
-
     const errorMsg = error.message || "";
-    
-    // 专门处理密钥泄露错误
-    if (errorMsg.includes('reported as leaked') || errorMsg.includes('API key not valid')) {
-      return { 
-        message: "⚠️ 【密钥失效】您的 API 密钥已被 Google 识别为泄露并禁用。请前往 AI Studio 生成新密钥，在环境变量中更新并重新部署。" 
-      };
+    if (errorMsg.includes('location is not supported')) {
+        return {
+            message: `🌍 【地理限制】侦探，总部拒绝了访问。请尝试切换至“美国”节点。`
+        };
     }
-    
-    // 处理频率限制
-    if (errorMsg.includes('429')) {
-      return { message: "侦探，由于免费配额限制，助手暂时无法查阅档案。请稍等一分钟后再试。" };
-    }
-
-    // 处理网络/地区限制
-    if (errorMsg.includes('fetch') || errorMsg.includes('NetworkError')) {
-      return { message: "📡 【连接失败】无法连接到 AI 服务器。请确认您的科学上网工具已开启全局模式，且支持 Google 服务。" };
-    }
-    
-    return { message: `抱歉，侦探。通讯器出现异常：${errorMsg || '未知错误'}` };
+    return { message: `抱歉，侦探。通讯出现异常：${errorMsg}` };
   }
 };
 
 export const generateClueVisual = async (prompt: string): Promise<string | null> => {
-  const apiKey = getSafeApiKey();
-  if (!apiKey) return null;
+  if (!process.env.API_KEY) return null;
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
-        parts: [{ text: `A gritty 1940s forensic evidence photo: ${prompt}` }]
+        parts: [{ text: `High-quality noir detective forensic evidence, 1940s, gritty, detailed, black and white film style: ${prompt}` }]
       },
       config: {
-        imageConfig: { aspectRatio: "1:1" }
+        imageConfig: { 
+          aspectRatio: "1:1"
+        }
       }
     });
 
@@ -131,8 +140,8 @@ export const generateClueVisual = async (prompt: string): Promise<string | null>
       }
     }
     return null;
-  } catch (error) {
-    console.error("图像生成失败:", error);
+  } catch (error: any) {
+    console.error("Image generation failed:", error.message || error);
     return null;
   }
 };

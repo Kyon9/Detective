@@ -23,6 +23,7 @@ export interface Case {
   initialContext: string;
   location: string;
   status: 'active' | 'solved' | 'cold';
+  truth?: string; // Hidden summary for the final reveal
 }
 
 export interface AgentResponse {
@@ -34,4 +35,6 @@ export interface AgentResponse {
     contentPrompt?: string; // If image, we use this to generate
     contentText?: string; // If text/map
   }>;
+  isSolved?: boolean; // Flag to indicate case is solved
+  solveSummary?: string; // Final summary of the case
 }
