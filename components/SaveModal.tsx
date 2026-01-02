@@ -56,11 +56,11 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
                 onClick={() => setStep('case')}
                 className="text-amber-600 hover:text-amber-500 text-xs font-black uppercase tracking-widest flex items-center gap-1 group"
               >
-                <span className="group-hover:-translate-x-1 transition-transform">←</span> 返回卷宗列表
+                <span className="group-hover:-translate-x-1 transition-transform">←</span> 返回案件列表
               </button>
             )}
             <h2 className="text-2xl font-black text-amber-500 typewriter-font uppercase tracking-[0.2em]">
-              {mode === 'save' ? '档案存入' : mode === 'load' ? '档案提取' : '卷宗查阅'} 
+              {mode === 'save' ? '保存调查' : mode === 'load' ? '调取进度' : '案件选择'} 
               {step === 'slot' ? ` : ${selectedCase?.title}` : ''}
             </h2>
           </div>
@@ -72,7 +72,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
           {step === 'case' ? (
             <div className="space-y-4">
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">
-                {mode === 'cases' ? '请选择您要开始调查的案件' : '第一步：选择目标案件卷宗'}
+                {mode === 'cases' ? '选择你要搜查的现场' : '选择目标案件'}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {ALL_CASES.map(c => (
@@ -95,15 +95,15 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
                   >
                     {c.id === currentCaseId && (
                       <div className="absolute -right-8 -top-8 w-16 h-16 bg-amber-600 rotate-45 flex items-end justify-center pb-1">
-                        <span className="text-[8px] text-slate-950 font-black -rotate-45 mb-1">NOW</span>
+                        <span className="text-[8px] text-slate-950 font-black -rotate-45 mb-1">调查中</span>
                       </div>
                     )}
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-2">NO.{c.id}</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-2">案号：{c.id}</span>
                     <h3 className="text-lg font-bold text-slate-200 group-hover:text-amber-500 transition-colors">《{c.title}》</h3>
                     <p className="text-[10px] text-slate-500 mt-2 uppercase">{c.location}</p>
                     {mode === 'cases' && (
                       <div className="mt-4 text-[9px] font-bold text-amber-600 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
-                        点击立即开启调查 →
+                        前往现场 →
                       </div>
                     )}
                   </div>
@@ -112,7 +112,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
             </div>
           ) : (
             <div className="space-y-6">
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">第二步：选择文件柜位置 (1-6)</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">选择进度存储位 (1-6)</p>
               
               <div className="grid grid-cols-3 gap-4">
                 {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {
@@ -150,7 +150,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
                       
                       <div className="flex flex-col">
                         <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                          {isEmpty ? '空置' : '已归档'}
+                          {isEmpty ? '空闲' : '已记录'}
                         </h3>
                         {!isEmpty && (
                           <p className="text-[8px] text-slate-600 mt-1 truncate">
@@ -162,13 +162,13 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
                       {!isEmpty && (
                         <div className="absolute inset-0 bg-slate-900/90 p-3 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center text-center">
                           <p className="text-[9px] text-slate-300 italic line-clamp-3">"{data.preview}"</p>
-                          <span className="text-[8px] text-amber-600 font-bold mt-2 uppercase tracking-tighter">点击提取</span>
+                          <span className="text-[8px] text-amber-600 font-bold mt-2 uppercase tracking-tighter">继续调查</span>
                         </div>
                       )}
                       
                       {isEmpty && mode === 'save' && (
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-amber-600/10">
-                           <span className="text-[10px] text-amber-600 font-black uppercase">写入档案</span>
+                           <span className="text-[10px] text-amber-600 font-black uppercase">记录当前进度</span>
                         </div>
                       )}
                     </div>
@@ -181,7 +181,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
 
         {/* Footer */}
         <div className="p-6 bg-slate-950/50 text-center border-t border-slate-800">
-          <p className="text-[9px] text-slate-600 uppercase tracking-[0.4em] font-bold">警署机密档案库 - 严禁未授权调阅</p>
+          <p className="text-[9px] text-slate-600 uppercase tracking-[0.4em] font-bold">黑色调查助理：现场实时笔记系统</p>
         </div>
       </div>
     </div>
