@@ -23,7 +23,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [slots, setSlots] = useState<Record<number, SlotData | null>>({});
 
-  const TOTAL_SLOTS = 9;
+  const TOTAL_SLOTS = 6;
 
   useEffect(() => {
     if (isOpen) {
@@ -112,7 +112,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
             </div>
           ) : (
             <div className="space-y-6">
-              <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">第二步：选择文件柜位置 (1-9)</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">第二步：选择文件柜位置 (1-6)</p>
               
               <div className="grid grid-cols-3 gap-4">
                 {Array.from({ length: TOTAL_SLOTS }).map((_, i) => {

@@ -24,6 +24,7 @@ export interface Case {
   location: string;
   status: 'active' | 'solved' | 'cold';
   truth?: string; // Hidden summary for the final reveal
+  hints?: string[]; // Keywords for user to ask about
 }
 
 export interface AgentResponse {

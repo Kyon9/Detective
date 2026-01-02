@@ -18,6 +18,7 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'save' | 'load' | 'cases'>('save');
   const [solvedSummary, setSolvedSummary] = useState<string | null>(null);
+  const [revealedHints, setRevealedHints] = useState<Record<number, boolean>>({});
   
   const [netStatus, setNetStatus] = useState<'testing' | 'ok' | 'fail' | 'restricted'>('testing');
   const [showNetHelp, setShowNetHelp] = useState(false);
@@ -27,6 +28,7 @@ const App: React.FC = () => {
   // 初始化案件
   const initCase = (targetCase: Case) => {
     setCurrentCase(targetCase);
+    setRevealedHints({});
     const intro: Message = {
       id: 'intro-' + Date.now(),
       role: 'assistant',
@@ -94,6 +96,7 @@ const App: React.FC = () => {
         setMessages(data.messages);
         setClues(data.clues);
         setSolvedSummary(null);
+        setRevealedHints({});
         setSaveStatus(`已从《${targetCase.title}》提取档案进度`);
         setTimeout(() => setSaveStatus(null), 3000);
         setModalOpen(false);
@@ -101,6 +104,10 @@ const App: React.FC = () => {
         setSaveStatus("提取档案失败");
       }
     }
+  };
+
+  const toggleHint = (index: number) => {
+    setRevealedHints(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -265,6 +272,26 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col relative bg-slate-950">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] z-10"></div>
           
+          {/* Hints Area */}
+          <div className="bg-slate-900/50 border-b border-slate-800 px-6 py-3 flex items-center gap-4 z-20 overflow-x-auto whitespace-nowrap custom-scrollbar">
+            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">线索提示:</span>
+            <div className="flex gap-2">
+              {currentCase.hints?.map((hint, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => toggleHint(idx)}
+                  className={`px-3 py-1 rounded border text-[10px] font-bold transition-all duration-300 uppercase tracking-tighter ${
+                    revealedHints[idx] 
+                      ? 'bg-amber-600/20 border-amber-600/50 text-amber-500' 
+                      : 'bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-500'
+                  }`}
+                >
+                  {revealedHints[idx] ? hint : `🔍 线索 ${idx + 1}`}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 z-0 custom-scrollbar">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
