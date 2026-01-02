@@ -40,7 +40,7 @@ export const getDetectiveResponse = async (
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: 'gemini-flash-latest', 
+      model: 'gemini-3-flash-preview', 
       contents: [
         ...history, 
         { 
@@ -79,7 +79,7 @@ export const getDetectiveResponse = async (
       }
     });
 
-    const text = response.text;
+    const text = response.text || "{}";
     return JSON.parse(text);
   } catch (error: any) {
     console.error("Gemini API Error:", error);
@@ -93,7 +93,7 @@ export const getDetectiveResponse = async (
 export const testConnection = async (): Promise<{ ok: boolean; error?: string }> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    await ai.models.generateContent({ model: 'gemini-flash-latest', contents: 'ping', config: { maxOutputTokens: 1 } });
+    await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: 'ping', config: { maxOutputTokens: 1 } });
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e.message }; }
 };
