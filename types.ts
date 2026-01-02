@@ -21,6 +21,7 @@ export interface Case {
   id: string;
   title: string;
   initialContext: string;
+  fullScript: string; // 新增：完整的推理小说剧本
   location: string;
   status: 'active' | 'solved' | 'cold';
   truth?: string; // Hidden summary for the final reveal

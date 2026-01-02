@@ -25,7 +25,6 @@ const App: React.FC = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 初始化案件
   const initCase = (targetCase: Case) => {
     setCurrentCase(targetCase);
     setRevealedHints({});
@@ -57,13 +56,9 @@ const App: React.FC = () => {
   const checkConnection = async () => {
     setNetStatus('testing');
     const result = await testConnection();
-    if (result.ok) {
-      setNetStatus('ok');
-    } else if (result.error === 'LOCATION_NOT_SUPPORTED') {
-      setNetStatus('restricted');
-    } else {
-      setNetStatus('fail');
-    }
+    if (result.ok) setNetStatus('ok');
+    else if (result.error?.includes('LOCATION')) setNetStatus('restricted');
+    else setNetStatus('fail');
   };
 
   useEffect(() => {
@@ -81,7 +76,7 @@ const App: React.FC = () => {
       preview: messages.length > 0 ? messages[messages.length - 1].text.substring(0, 50) : "新案件"
     };
     localStorage.setItem(`detective_save_${caseId}_slot_${slot}`, JSON.stringify(saveData));
-    setSaveStatus(`《${ALL_CASES.find(c => c.id === caseId)?.title}》进度已存入文件柜 #${slot}`);
+    setSaveStatus(`进度已存入 #${slot}`);
     setTimeout(() => setSaveStatus(null), 3000);
     setModalOpen(false);
   };
@@ -97,17 +92,13 @@ const App: React.FC = () => {
         setClues(data.clues);
         setSolvedSummary(null);
         setRevealedHints({});
-        setSaveStatus(`已从《${targetCase.title}》提取档案进度`);
+        setSaveStatus(`进度已提取`);
         setTimeout(() => setSaveStatus(null), 3000);
         setModalOpen(false);
       } catch (e) {
-        setSaveStatus("提取档案失败");
+        setSaveStatus("提取失败");
       }
     }
-  };
-
-  const toggleHint = (index: number) => {
-    setRevealedHints(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const handleSendMessage = async (e?: React.FormEvent) => {
@@ -131,7 +122,18 @@ const App: React.FC = () => {
         parts: [{ text: m.text }]
       }));
 
-      const response: AgentResponse = await getDetectiveResponse(history, userMessage.text, currentCase.initialContext);
+      const clueTitles = clues.map(c => c.title);
+
+      // 同时传递简报和完整剧本原件
+      const response: AgentResponse = await getDetectiveResponse(
+        history, 
+        userMessage.text, 
+        { 
+          initialContext: currentCase.initialContext, 
+          fullScript: currentCase.fullScript 
+        },
+        clueTitles
+      );
       
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -148,8 +150,10 @@ const App: React.FC = () => {
 
       if (response.newClues && response.newClues.length > 0) {
         for (const clueData of response.newClues) {
+          if (clueTitles.includes(clueData.title)) continue;
+
           let content = clueData.contentText || '';
-          if (clueData.type === 'image' || clueData.type === 'map') {
+          if (clueData.type === 'image') {
             const visual = await generateClueVisual(clueData.contentPrompt || clueData.title);
             content = visual || 'https://picsum.photos/400/400?grayscale';
           }
@@ -165,10 +169,11 @@ const App: React.FC = () => {
         }
       }
     } catch (error: any) {
+      console.error("Handle message error:", error);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'assistant',
-        text: "通讯异常，请确认网络环境并重试。",
+        text: "抱歉，侦探。通讯信号中断了。",
         timestamp: Date.now()
       }]);
     } finally {
@@ -204,43 +209,22 @@ const App: React.FC = () => {
             🔍 更换案件
           </button>
           <div className="flex bg-slate-950/50 rounded-lg p-1 border border-slate-800">
-            <button 
-              onClick={() => { setModalMode('save'); setModalOpen(true); }} 
-              className="px-4 py-1.5 text-xs font-black text-slate-400 hover:text-amber-500 rounded transition-all uppercase tracking-tighter"
-            >
-              💾 档案存档
-            </button>
+            <button onClick={() => { setModalMode('save'); setModalOpen(true); }} className="px-4 py-1.5 text-xs font-black text-slate-400 hover:text-amber-500 rounded transition-all uppercase tracking-tighter">💾 档案存档</button>
             <div className="w-[1px] bg-slate-800 my-1 mx-1"></div>
-            <button 
-              onClick={() => { setModalMode('load'); setModalOpen(true); }} 
-              className="px-4 py-1.5 text-xs font-black text-slate-400 hover:text-amber-500 rounded transition-all uppercase tracking-tighter"
-            >
-              📂 档案提取
-            </button>
+            <button onClick={() => { setModalMode('load'); setModalOpen(true); }} className="px-4 py-1.5 text-xs font-black text-slate-400 hover:text-amber-500 rounded transition-all uppercase tracking-tighter">📂 档案提取</button>
           </div>
         </div>
       </header>
 
-      {/* Case Solved Modal */}
       {solvedSummary && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-6">
           <div className="bg-slate-900 border-2 border-amber-600 p-8 max-w-2xl rounded-sm shadow-[0_0_50px_rgba(217,119,6,0.2)] animate-fade-in relative">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-600 text-slate-950 px-8 py-2 font-black uppercase tracking-[0.5em] shadow-xl">
-              案件已破获
-            </div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-600 text-slate-950 px-8 py-2 font-black uppercase tracking-[0.5em] shadow-xl">案件已破获</div>
             <h2 className="text-3xl font-black typewriter-font text-amber-500 mb-6 text-center border-b border-slate-800 pb-4">结案报告：{currentCase.title}</h2>
-            <div className="font-serif text-lg leading-relaxed text-slate-300 italic mb-8 max-h-[50vh] overflow-y-auto px-4 custom-scrollbar">
-              {solvedSummary}
-            </div>
+            <div className="font-serif text-lg leading-relaxed text-slate-300 italic mb-8 max-h-[50vh] overflow-y-auto px-4 custom-scrollbar">{solvedSummary}</div>
             <div className="flex justify-center gap-4">
-              <button 
-                onClick={() => setSolvedSummary(null)} 
-                className="px-8 py-3 bg-slate-800 text-slate-400 font-bold border border-slate-700 hover:text-white transition-all uppercase tracking-widest text-xs"
-              >返回现场</button>
-              <button 
-                onClick={() => { setSolvedSummary(null); setModalMode('cases'); setModalOpen(true); }} 
-                className="px-8 py-3 bg-amber-700 text-white font-bold hover:bg-amber-600 transition-all uppercase tracking-widest text-xs shadow-lg"
-              >切换案件</button>
+              <button onClick={() => setSolvedSummary(null)} className="px-8 py-3 bg-slate-800 text-slate-400 font-bold border border-slate-700 hover:text-white transition-all uppercase tracking-widest text-xs">返回现场</button>
+              <button onClick={() => { setSolvedSummary(null); setModalMode('cases'); setModalOpen(true); }} className="px-8 py-3 bg-amber-700 text-white font-bold hover:bg-amber-600 transition-all uppercase tracking-widest text-xs shadow-lg">切换案件</button>
             </div>
           </div>
         </div>
@@ -251,39 +235,28 @@ const App: React.FC = () => {
           <div className="bg-slate-900 border border-slate-700 p-8 max-w-md rounded-xl shadow-2xl">
             <h3 className="text-amber-500 typewriter-font text-xl mb-4 uppercase">📡 侦探通讯诊断</h3>
             <div className="space-y-4 text-sm text-slate-300">
-              <p>为了获得最佳体验，请确保您的网络环境稳定：</p>
-              <ul className="list-disc pl-5 space-y-2 marker:text-amber-700">
-                <li>推荐使用美国或新加坡节点。</li>
-                <li>确保开启了全局代理模式。</li>
-              </ul>
+              <p>请确保网络代理状态稳定。推荐节点：美国、新加坡。</p>
             </div>
             <button onClick={() => setShowNetHelp(false)} className="mt-8 w-full bg-slate-800 text-white py-2 rounded hover:bg-slate-700 transition-colors">确认</button>
           </div>
         </div>
       )}
 
-      {saveStatus && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] bg-amber-600 text-white px-6 py-2 rounded-full shadow-2xl text-sm animate-fade-in font-bold">
-          {saveStatus}
-        </div>
-      )}
+      {saveStatus && <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[60] bg-amber-600 text-white px-6 py-2 rounded-full shadow-2xl text-sm animate-fade-in font-bold">{saveStatus}</div>}
 
       <div className="flex flex-1 overflow-hidden relative">
         <div className="flex-1 flex flex-col relative bg-slate-950">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)] z-10"></div>
           
-          {/* Hints Area */}
           <div className="bg-slate-900/50 border-b border-slate-800 px-6 py-3 flex items-center gap-4 z-20 overflow-x-auto whitespace-nowrap custom-scrollbar">
             <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">线索提示:</span>
             <div className="flex gap-2">
               {currentCase.hints?.map((hint, idx) => (
                 <button
                   key={idx}
-                  onClick={() => toggleHint(idx)}
+                  onClick={() => setRevealedHints(prev => ({...prev, [idx]: !prev[idx]}))}
                   className={`px-3 py-1 rounded border text-[10px] font-bold transition-all duration-300 uppercase tracking-tighter ${
-                    revealedHints[idx] 
-                      ? 'bg-amber-600/20 border-amber-600/50 text-amber-500' 
-                      : 'bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-500'
+                    revealedHints[idx] ? 'bg-amber-600/20 border-amber-600/50 text-amber-500' : 'bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-500'
                   }`}
                 >
                   {revealedHints[idx] ? hint : `🔍 线索 ${idx + 1}`}
@@ -327,7 +300,7 @@ const App: React.FC = () => {
                 disabled={!!solvedSummary}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={solvedSummary ? "案件已结，请开启新档案..." : "键入您的调查指令..."}
+                placeholder={solvedSummary ? "案件已结" : "键入您的调查指令..."}
                 className="flex-1 bg-slate-950 border border-slate-800 rounded-sm px-6 py-4 text-slate-200 focus:outline-none focus:border-amber-700/50 transition-all placeholder:text-slate-700 text-sm disabled:opacity-50"
               />
               <button
