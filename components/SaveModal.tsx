@@ -47,7 +47,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
 
   return (
     <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[100] p-4 backdrop-blur-md">
-      <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-sm overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] animate-fade-in flex flex-col max-h-[90vh]">
+      <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl rounded-sm overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.8)] animate-fade-in flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex justify-between items-center p-6 border-b border-slate-800 bg-slate-800/30">
           <div className="flex items-center gap-4">
@@ -74,7 +74,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
               <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] mb-6 border-l-2 border-amber-900 pl-3">
                 {mode === 'cases' ? '选择你要搜查的现场' : '选择目标案件'}
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {ALL_CASES.map(c => (
                   <div 
                     key={c.id}
@@ -181,7 +181,7 @@ const SaveModal: React.FC<SaveModalProps> = ({ isOpen, mode, onClose, onSelectSl
 
         {/* Footer */}
         <div className="p-6 bg-slate-950/50 text-center border-t border-slate-800">
-          <p className="text-[9px] text-slate-600 uppercase tracking-[0.4em] font-bold">黑色调查助理：现场实时笔记系统</p>
+          <p className="text-[9px] text-slate-600 uppercase tracking-[0.4em] font-bold">谜案回声：现场实时笔记系统</p>
         </div>
       </div>
     </div>

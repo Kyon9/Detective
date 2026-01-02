@@ -20,6 +20,7 @@ export interface Message {
 export interface Case {
   id: string;
   title: string;
+  shortDescription: string;
   initialContext: string;
   fullScript: string; 
   location: string;
